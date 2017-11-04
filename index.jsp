@@ -2,6 +2,8 @@
 <%@ page import="java.text.*" %>
 <%@ page import="java.io.*" %>
 <%@ page import="java.util.*" %>
+<%@ page import="java.time.*" %>
+<%@ page import="java.time.format.*" %>
 
 <html>
 <head>
@@ -10,7 +12,8 @@
 		* { font-family: Sans-serif; cursor: default; }
 		html, body { margin: 0 }
 		#content { width: 80%; margin: 0 auto ;  box-shadow: 10px 0px 1.5em grey, -10px 0px 15px grey; padding: 0 1em; }0
-		
+
+		h2 { color: blue; }
 		h1 { margin-top: 0; padding-top: .5em; }
 		
 		table { width: 100%; }
@@ -25,10 +28,12 @@
 		textarea { width: 100%; height: 100%; border: 1px solid grey; }
 		
 		[onclick]:hover { color: #0000EE; text-decoration: underline; }
+		.warning { color: red; font-weight: bold; }
 	</style>
 	
 	
-	<%  // Parmeters
+	
+	<%  // Get parmeters from config file and from url
 		Properties conf = new Properties();
 		conf.load(new FileInputStream(getServletContext().getRealPath("/")+"/config.properties"));
 		
@@ -40,20 +45,27 @@
 			conf.getProperty("password")
 		).createStatement();
 		String source = conf.getProperty("source");
-		String trans = request.getParameter("trans"); 
-		String date  = request.getParameter("date");
+		String trans  = request.getParameter("trans"); 
+		String date   = request.getParameter("date");
 		String logText = conf.getProperty("logText");
 		
 		int limit = 12;
 		if(request.getParameter("limit")!=null)
 			limit = Integer.parseInt(request.getParameter("limit"));
+		
+		String mode = request.getParameter("mode");
+		if(mode==null) mode="Refresh";
 	%>
 </head>
 
 
 
 <body><div id="content">
-	
+
+	<select id="mode" onchange="refresh()" style="float: right;">
+        	<option <% if(mode.equalsIgnoreCase("freeze"))  out.print("selected"); %> >Freeze</option>
+        	<option <% if(!mode.equalsIgnoreCase("freeze")) out.print("selected"); %> >Refresh</option>
+	</select>
 	<h1>Load Status Dashboard</h1>
 	<table><% 
 		ResultSet rs = db.executeQuery(source);
@@ -71,21 +83,32 @@
 				
 				int p = rs.getString(1).lastIndexOf("/");
 				if(!rs.getString(1).substring(0,p).equals(dir))
-                    out.println("<tr><th class='"+rs.getMetaData().getColumnLabel(1)+"'>"+rs.getString(1).substring(0,p)+"</th></tr>");
-                dir = rs.getString(1).substring(0,p);
+                    		out.println("<tr><th class='"+rs.getMetaData().getColumnLabel(1)+"'>"+rs.getString(1).substring(0,p)+"</th></tr>");
+                		dir = rs.getString(1).substring(0,p);
 				
 				out.print("<tr>");
 				for(int i=1; i<=columnCount; i++){
 					out.print("<td class='"+rs.getMetaData().getColumnLabel(i));
+
+					//if(i==2 && !lastNight(rs.getString(2)))
+                    			//    out.print( " warning");
+					if(i==3 && !rs.getString(3).equals("end"))
+						out.print( " warning");
+                    			if(i==5 && rs.getInt(5)==0)
+						out.print( " warning");
+                    			if(i==6 && rs.getInt(6)>0)
+						out.print( " warning");
+
 					if(i==1)
 						out.print("' onclick='refresh(\""+rs.getString(1)+"\")");
 					if(i==2)
 						out.print("' onclick='refresh(\""+rs.getString(1)+"\", \""+rs.getString(2)+"\")");
 
+					
 					if(i==1)
-						out.print("'>"+rs.getString(i).substring(p+1)+"</td>");
+						out.println("'>"+rs.getString(i).substring(p+1)+"</td>");
 					else
-						out.print("'>"+rs.getString(i)+"</td>");						
+						out.println("'>"+rs.getString(i)+"</td>");						
 				}
 				out.println("</tr>");
 				key = rs.getString(1);
@@ -98,10 +121,10 @@
 
 	<% if(trans!=null){ // History %> 
 	<br /><hr />
-	<h2><%= trans %></h2>
 		<span style="float: right;">
 			Limit: <input id="limit" type="Number" onchange="refresh('<%= trans%>')" value="<%= limit%>">
 		</span>
+	<h2><%= trans %></h2>
 	<table><%
 		String sql = "SELECT * FROM ("+source+") a WHERE Transformation='"+trans+"' LIMIT "+limit;
 		rs = db.executeQuery(sql);
@@ -134,16 +157,16 @@
 	<% if(trans!=null && date!=null){ // Log %> 
 	<br /><hr />
 	<h2>Run of <%= trans %> of <%= date %></h2>
-	<textarea>
+
 	<%
 		PreparedStatement stmt = db.getConnection().prepareStatement(logText);
 		stmt.setString(1, trans);
 		stmt.setString(2, date);
 		rs = stmt.executeQuery();
 		if(rs.next())
-			out.println(rs.getString(1));
+			out.println("<textarea>"+rs.getString(1)+"</textarea>");
 		rs.close();
-	%></textarea><%}
+	}
 	
 	
 	db.getConnection().close();
@@ -154,26 +177,32 @@
 	
 <script>
 	refresh = (trans, date) => {
-		console.log('refresh '+trans+' '+date);
-		var url = '<%= request.getRequestURL() %>';
+		//console.log('refresh '+trans+' '+date);
+		var url = '<%= request.getRequestURL() %>?mode=' + document.getElementById("mode").value;
 		if(trans)
-            url += '?trans='+trans;
+            		url += '&trans='+trans;
 		if(date)
-            url += '&date='+date;
-		var limit = document.getElementById('limit').value;
-		if(limit)
-			url += '&limit='+limit;
+            		url += '&date='+date;
+		if(document.getElementById('limit'))
+			url += '&limit='+document.getElementById('limit').value;
 		window.location = url;
-		console.log(url);
 	}
 	
 	onload = () => {
 		document.body.scrollTop = sessionStorage.getItem('kettleLogScroll');
+		if(<%= mode.equals("Refresh") %>)
+            		setTimeout(function() { location=''}, 2*1000);
 	}
 	document.body.onscroll = () => {
 		sessionStorage.setItem('kettleLogScroll', document.body.scrollTop);
 	}
 
+	<%!
+	boolean lastNight(String date){
+		LocalDateTime yesterday = LocalDate.now().minusDays(1).atTime(20,0);
+        	LocalDateTime run = LocalDateTime.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.S"));
+		return run.isAfter(yesterday);
+	}%>
 </script>
 </body>
 </html>
