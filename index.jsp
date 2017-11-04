@@ -54,7 +54,7 @@
 			limit = Integer.parseInt(request.getParameter("limit"));
 		
 		String mode = request.getParameter("mode");
-		if(mode==null) mode="Refresh";
+		if(mode==null) mode="Freeze";
 	%>
 </head>
 
