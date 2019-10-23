@@ -7,27 +7,28 @@
   #strip { position: relative; width: 100%; height: 16px; background: white; }
   #strip * { 
 	  position: absolute; 
-	  width: 8px; height: 16px; top: -3px; margin-left: -8px; 
+	  width: 16px; height: 16px; top: -3px; margin-left: -8px; 
 	  border: 3px solid lightgrey; border-radius: 50%; 
 	  background: none; color: transparent; cursor: default;
 	}
 
-  #colorEditor { position: absolute; width: 200px; display: none; }
+//  #colorEditor { position: absolute; width: 200px; display: none; }
+  #colorEditor { position: absolute; width: 200px; }
  </style>
 
 
-<h1>Led Strip Designer</h1>
+<h1>LED Strip Designer</h1>
 <div id="strip">
-    <div style="left: 10%" onmousedown="startDrag(event)" onclick="editColor(event)">#0000ff</div>
-    <div style="left: 25%" onmousedown="startDrag(event)" onclick="editColor(event)">#00ff00</div>
-    <div style="left: 50%" onmousedown="startDrag(event)" onclick="editColor(event)">#ffff00</div>
-    <div style="left: 75%" onmousedown="startDrag(event)" onclick="editColor(event)">#ff0000</div>
-    <div style="left: 90%" onmousedown="startDrag(event)" onclick="editColor(event)">#ff0000</div>
+    <div style="left: 10%" onmousedown="startDrag(event)" >#0000ff</div>
+    <div style="left: 25%" onmousedown="startDrag(event)" >#00ff00</div>
+    <div style="left: 50%" onmousedown="startDrag(event)" >#ffff00</div>
+    <div style="left: 75%" onmousedown="startDrag(event)" >#ff0000</div>
+    <div style="left: 90%" onmousedown="startDrag(event)" >#ff0000</div>
 </div>
 <canvas id="colorEditor"></canvas>
 
 
-<!--script src="lib/html5kellycolorpicker.min.js"></script-->
+<script src="lib/html5kellycolorpicker.min.js"></script>
 
 <script>
 draw = ()=>{
@@ -47,56 +48,69 @@ var drag;
 startDrag = (event)=>{
 	drag = event.target;
 	drag.dx = event.clientX - drag.offsetLeft;
+
+	drag.xMin = 0;
+	drag.xMax = drag.parentElement.offsetLeft + drag.parentElement.offsetWidth;
+	for(var i of document.querySelectorAll('#strip *')){
+		if(i.offsetLeft<drag.offsetLeft && drag.xMin<i.offsetLeft)
+			drag.xMin = i.offsetLeft;
+		if(i.offsetLeft>drag.offsetLeft && drag.xMax>i.offsetLeft)
+			drag.xMax = i.offsetLeft;
+	}
+	
+	editColor();
 	event.preventDefault();
 }
-document.body.addEventListener('mouseup', (event)=>{
+window.addEventListener('mouseup', (event)=>{
 	drag = null;
 })
 document.body.addEventListener('mousemove', (event)=>{
 	if(drag){
 		var m = Number(getComputedStyle(drag).marginLeft.replace('px', ''));
 
-	//TODO: stay between prev and next element
-		var x = event.clientX - drag.parentElement.offsetLeft - drag.dx + m;
-		if(x<0) x = 0;
-		if(x>drag.parentElement.offsetWidth) x = drag.parentElement.offsetWidth;
-		drag.style.left = event.clientX +'px';
-		draw();
+		var x = event.clientX - drag.dx;
+		if(x<drag.xMin) x = drag.xMin;
+		if(x>drag.xMax) x = drag.xMax;
 
-		var x = drag.offsetLeft-85;
-		if(x<0) x=0;
-		if(x>innerWidth-200) x=innerWidth-200;
-		document.querySelector('#colorEditor').style.left = x+'px';
+		drag.style.left = (x-m) +'px';
+		draw();
 		
+		var x = drag.offsetLeft + drag.offsetWidth/2 - document.querySelector('#colorEditor').offsetWidth /2;
+		if(x<drag.parentElement.offsetLeft) x=drag.parentElement.offsetLeft;
+		if(x>drag.parentElement.offsetLeft+drag.parentElement.offsetWidth-document.querySelector('#colorEditor').offsetWidth)
+			x = drag.parentElement.offsetLeft+drag.parentElement.offsetWidth-document.querySelector('#colorEditor').offsetWidth;
+		document.querySelector('#colorEditor').style.left = x+'px';
 	}
 })
 
-editColor = (event)=>{
+var colorPicker;
+editColor = ()=>{
+/*
 	var colorEditor = document.querySelector('#colorEditor');
 	if(colorEditor.style.display=='block')
 		colorEditor.style.display = 'none';
 	else
 		colorEditor.style.display = 'block';
+*/
+	var x = drag.offsetLeft + drag.offsetWidth/2 - document.querySelector('#colorEditor').offsetWidth /2;
+	if(x<drag.parentElement.offsetLeft) x=drag.parentElement.offsetLeft;
+	if(x>drag.parentElement.offsetLeft+drag.parentElement.offsetWidth-document.querySelector('#colorEditor').offsetWidth)
+		x = drag.parentElement.offsetLeft+drag.parentElement.offsetWidth-document.querySelector('#colorEditor').offsetWidth;
+	document.querySelector('#colorEditor').style.left = x+'px';
 
-	var x = event.target.offsetLeft-85;
-	if(x<0) x=0;
-	if(x>innerWidth-200) x=innerWidth-200;
-	colorEditor.style.left = x+'px';
-
-/*
-  new KellyColorPicker({
+	var i = drag;
+	colorPicker = new KellyColorPicker({
 		place: colorEditor,
 		size: 200,
-		color: event.target.innerHTML,
+		color: i.innerHTML,
 		methodSwitch : true,
 		changeCursor: false,
 		userEvents: { 
 			change : (self)=>{
-				event.target.innerHTML = self.getCurColorHex();
+				i.innerHTML = self.getCurColorHex();
 				draw();
 			}
 		}
 	});
-*/
 }
 </script>
