@@ -1,0 +1,102 @@
+<meta charset="utf-8">
+
+<style>
+  * { background: black; color: white; font-family: sans-serif; }
+  body { width: 100%; height: 100%; }
+
+  #strip { position: relative; width: 100%; height: 16px; background: white; }
+  #strip * { 
+	  position: absolute; 
+	  width: 8px; height: 16px; top: -3px; margin-left: -8px; 
+	  border: 3px solid lightgrey; border-radius: 50%; 
+	  background: none; color: transparent; cursor: default;
+	}
+
+  #colorEditor { position: absolute; width: 200px; display: none; }
+ </style>
+
+
+<h1>Led Strip Designer</h1>
+<div id="strip">
+    <div style="left: 10%" onmousedown="startDrag(event)" onclick="editColor(event)">#0000ff</div>
+    <div style="left: 25%" onmousedown="startDrag(event)" onclick="editColor(event)">#00ff00</div>
+    <div style="left: 50%" onmousedown="startDrag(event)" onclick="editColor(event)">#ffff00</div>
+    <div style="left: 75%" onmousedown="startDrag(event)" onclick="editColor(event)">#ff0000</div>
+    <div style="left: 90%" onmousedown="startDrag(event)" onclick="editColor(event)">#ff0000</div>
+</div>
+<canvas id="colorEditor"></canvas>
+
+
+<!--script src="lib/html5kellycolorpicker.min.js"></script-->
+
+<script>
+draw = ()=>{
+	var s = 'linear-gradient(to right, ';
+	for(var i of document.querySelectorAll('#strip *')){
+		var m = Number(getComputedStyle(i).marginLeft.replace('px', ''));
+		var x = (i.offsetLeft-m) /i.parentElement.offsetWidth *100;
+		s += i.innerHTML+' '+x+'%, ';
+	}
+	s = s.substring(0,s.length-2)+')';
+	document.querySelector('#strip').style.background = s;
+}
+draw();
+
+
+var drag;
+startDrag = (event)=>{
+	drag = event.target;
+	drag.dx = event.clientX - drag.offsetLeft;
+	event.preventDefault();
+}
+document.body.addEventListener('mouseup', (event)=>{
+	drag = null;
+})
+document.body.addEventListener('mousemove', (event)=>{
+	if(drag){
+		var m = Number(getComputedStyle(drag).marginLeft.replace('px', ''));
+
+	//TODO: stay between prev and next element
+		var x = event.clientX - drag.parentElement.offsetLeft - drag.dx + m;
+		if(x<0) x = 0;
+		if(x>drag.parentElement.offsetWidth) x = drag.parentElement.offsetWidth;
+		drag.style.left = event.clientX +'px';
+		draw();
+
+		var x = drag.offsetLeft-85;
+		if(x<0) x=0;
+		if(x>innerWidth-200) x=innerWidth-200;
+		document.querySelector('#colorEditor').style.left = x+'px';
+		
+	}
+})
+
+editColor = (event)=>{
+	var colorEditor = document.querySelector('#colorEditor');
+	if(colorEditor.style.display=='block')
+		colorEditor.style.display = 'none';
+	else
+		colorEditor.style.display = 'block';
+
+	var x = event.target.offsetLeft-85;
+	if(x<0) x=0;
+	if(x>innerWidth-200) x=innerWidth-200;
+	colorEditor.style.left = x+'px';
+
+/*
+  new KellyColorPicker({
+		place: colorEditor,
+		size: 200,
+		color: event.target.innerHTML,
+		methodSwitch : true,
+		changeCursor: false,
+		userEvents: { 
+			change : (self)=>{
+				event.target.innerHTML = self.getCurColorHex();
+				draw();
+			}
+		}
+	});
+*/
+}
+</script>
