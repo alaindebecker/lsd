@@ -1,2 +1,2 @@
 # lsd
-Load Supervisor Dashboard for Kettle
+LED Strip Designer 
