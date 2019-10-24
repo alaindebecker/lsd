@@ -33,7 +33,7 @@
 <script>
 draw = ()=>{
 	var s = 'linear-gradient(to right, ';
-	for(var i of document.querySelectorAll('#strip *')){
+	for(var i of [].slice.call(document.querySelectorAll("#strip *")).sort((i,j)=>i.offsetLeft-j.offsetLeft)){
 		var m = Number(getComputedStyle(i).marginLeft.replace('px', ''));
 		var x = (i.offsetLeft-m) /i.parentElement.offsetWidth *100;
 		s += i.innerHTML+' '+x+'%, ';
@@ -48,16 +48,6 @@ var drag;
 startDrag = (event)=>{
 	drag = event.target;
 	drag.dx = event.clientX - drag.offsetLeft;
-
-	drag.xMin = 0;
-	drag.xMax = drag.parentElement.offsetLeft + drag.parentElement.offsetWidth;
-	for(var i of document.querySelectorAll('#strip *')){
-		if(i.offsetLeft<drag.offsetLeft && drag.xMin<i.offsetLeft)
-			drag.xMin = i.offsetLeft;
-		if(i.offsetLeft>drag.offsetLeft && drag.xMax>i.offsetLeft)
-			drag.xMax = i.offsetLeft;
-	}
-	
 	editColor();
 	event.preventDefault();
 }
@@ -67,12 +57,7 @@ window.addEventListener('mouseup', (event)=>{
 document.body.addEventListener('mousemove', (event)=>{
 	if(drag){
 		var m = Number(getComputedStyle(drag).marginLeft.replace('px', ''));
-
-		var x = event.clientX - drag.dx;
-		if(x<drag.xMin) x = drag.xMin;
-		if(x>drag.xMax) x = drag.xMax;
-
-		drag.style.left = (x-m) +'px';
+		drag.style.left = (event.clientX - drag.dx-m) +'px';
 		draw();
 		
 		var x = drag.offsetLeft + drag.offsetWidth/2 - document.querySelector('#colorEditor').offsetWidth /2;
