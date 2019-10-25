@@ -3,99 +3,91 @@
 <style>
   * { background: black; color: white; font-family: sans-serif; }
   body { width: 100%; height: 100%; }
-
-  #strip { position: relative; width: 100%; height: 16px; background: white; }
-  #strip * { 
-	  position: absolute; 
-	  width: 16px; height: 16px; top: -3px; margin-left: -8px; 
-	  border: 3px solid lightgrey; border-radius: 50%; 
-	  background: none; color: transparent; cursor: default;
+  #strip  { position: relative; width: 90%; height: .9em; background: white; }
+  .slider { 
+  	  position: absolute; cursor: default;
+	  width: .9em; height: .9em; line-height: .9em; border-radius: 8px;
+	  background: lightgrey;
 	}
+	
+</style>
 
-//  #colorEditor { position: absolute; width: 200px; display: none; }
-  #colorEditor { position: absolute; width: 200px; }
- </style>
-
+<script src="lib/iro.min.js"></script>
 
 <h1>LED Strip Designer</h1>
 <div id="strip">
-    <div style="left: 10%" onmousedown="startDrag(event)" >#0000ff</div>
-    <div style="left: 25%" onmousedown="startDrag(event)" >#00ff00</div>
-    <div style="left: 50%" onmousedown="startDrag(event)" >#ffff00</div>
-    <div style="left: 75%" onmousedown="startDrag(event)" >#ff0000</div>
-    <div style="left: 90%" onmousedown="startDrag(event)" >#ff0000</div>
+	<div class="slider" style="left:  0%; color: #ff0000" onmousedown="startDrag(event)">&#9673;</div>
+	<div class="slider" style="left: 25%; color: #ffff00" onmousedown="startDrag(event)">&#9673;</div>
+	<div class="slider" style="left: 50%; color: #00ff00" onmousedown="startDrag(event)">&#9673;</div>
+	<div class="slider" style="left: 75%; color: #0000ff" onmousedown="startDrag(event)">&#9673;</div>
+	<div class="slider" style="left:100%; color: #ff0000" onmousedown="startDrag(event)">&#9673;</div>
 </div>
-<canvas id="colorEditor"></canvas>
-
-
-<script src="lib/html5kellycolorpicker.min.js"></script>
 
 <script>
-draw = ()=>{
-	var s = 'linear-gradient(to right, ';
-	for(var i of [].slice.call(document.querySelectorAll("#strip *")).sort((i,j)=>i.offsetLeft-j.offsetLeft)){
-		var m = Number(getComputedStyle(i).marginLeft.replace('px', ''));
-		var x = (i.offsetLeft-m) /i.parentElement.offsetWidth *100;
-		s += i.innerHTML+' '+x+'%, ';
+onload = ()=> {
+	for(var i of document.querySelectorAll('.slider')){
+		var p = document.createElement('div');
+		p.style.display = 'none';
+		i.appendChild(p);
+		var w = 200;
+		p.style.marginLeft = (p.parentElement.offsetWidth-w)/2 +'px'; 
+		new iro.ColorPicker(p,{ width: w, handleRadius: 5, color: p.parentElement.style.color })
+			.on(['color:init', 'color:change'], function(color){
+				if(this.el)
+					this.el.parentElement.style.color = color.hexString;
+				draw();
+		});
 	}
-	s = s.substring(0,s.length-2)+')';
-	document.querySelector('#strip').style.background = s;
+	draw();
 }
-draw();
 
 
 var drag;
 startDrag = (event)=>{
+	event.preventDefault();
 	drag = event.target;
 	drag.dx = event.clientX - drag.offsetLeft;
-	editColor();
-	event.preventDefault();
+	
+	for(i of document.querySelectorAll('.slider'))
+		if(i!=drag)
+			i.firstElementChild.style.display = 'none';
+		else
+			//FIXIT: Should not vanish when click on color wheel.
+			drag.firstElementChild.style.display = 'block';
 }
 window.addEventListener('mouseup', (event)=>{
 	drag = null;
 })
 document.body.addEventListener('mousemove', (event)=>{
 	if(drag){
-		var m = Number(getComputedStyle(drag).marginLeft.replace('px', ''));
-		drag.style.left = (event.clientX - drag.dx-m) +'px';
-		draw();
+		strip = drag.parentElement;
 		
-		var x = drag.offsetLeft + drag.offsetWidth/2 - document.querySelector('#colorEditor').offsetWidth /2;
-		if(x<drag.parentElement.offsetLeft) x=drag.parentElement.offsetLeft;
-		if(x>drag.parentElement.offsetLeft+drag.parentElement.offsetWidth-document.querySelector('#colorEditor').offsetWidth)
-			x = drag.parentElement.offsetLeft+drag.parentElement.offsetWidth-document.querySelector('#colorEditor').offsetWidth;
-		document.querySelector('#colorEditor').style.left = x+'px';
+		var x = event.clientX - drag.dx;
+		if(x<strip.offsetLeft)
+			x = strip.offsetLeft;
+		if(x>strip.offsetLeft+strip.offsetWidth-drag.offsetWidth)
+			x = strip.offsetLeft+strip.offsetWidth-drag.offsetWidth;
+		drag.style.left = x+'px';
+		
+		//TODO: drag.firstElementChild max not exist
+		var x = event.clientX - drag.dx + drag.offsetWidth/2 - drag.firstElementChild.offsetWidth/2;
+		var y = drag.offsetTop + drag.offsetHeight + 12;
+		drag.firstElementChild.style.left = x+'px';
+		drag.firstElementChild.style.top  = y+'px';
 	}
+	draw();
 })
 
-var colorPicker;
-editColor = ()=>{
-/*
-	var colorEditor = document.querySelector('#colorEditor');
-	if(colorEditor.style.display=='block')
-		colorEditor.style.display = 'none';
-	else
-		colorEditor.style.display = 'block';
-*/
-	var x = drag.offsetLeft + drag.offsetWidth/2 - document.querySelector('#colorEditor').offsetWidth /2;
-	if(x<drag.parentElement.offsetLeft) x=drag.parentElement.offsetLeft;
-	if(x>drag.parentElement.offsetLeft+drag.parentElement.offsetWidth-document.querySelector('#colorEditor').offsetWidth)
-		x = drag.parentElement.offsetLeft+drag.parentElement.offsetWidth-document.querySelector('#colorEditor').offsetWidth;
-	document.querySelector('#colorEditor').style.left = x+'px';
 
-	var i = drag;
-	colorPicker = new KellyColorPicker({
-		place: colorEditor,
-		size: 200,
-		color: i.innerHTML,
-		methodSwitch : true,
-		changeCursor: false,
-		userEvents: { 
-			change : (self)=>{
-				i.innerHTML = self.getCurColorHex();
-				draw();
-			}
-		}
-	});
+draw = ()=>{
+	var s = 'linear-gradient(to right, ';
+	for(var i of [].slice.call(document.querySelectorAll('.slider')).sort((i,j)=>i.offsetLeft-j.offsetLeft)){
+		var m = Number(getComputedStyle(i).marginLeft.replace('px', ''));
+		var x = (i.offsetLeft+i.offsetWidth/2) /i.parentElement.offsetWidth *100;
+		s += i.style.color+' '+x+'%, ';
+	}
+	s = s.substring(0,s.length-2)+')';
+	document.querySelector('#strip').style.background = s;
 }
+
 </script>
