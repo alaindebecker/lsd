@@ -3,11 +3,11 @@
 <style>
   * { background: black; color: white; font-family: sans-serif; }
   body { width: 100%; height: 100%; }
-  #strip  { position: relative; width: 90%; height: .9em; background: white; }
+  #strip  { position: relative; width: 70%; height: .9em; margin-left: 3em; background: white; }
   .slider { 
   	  position: absolute; cursor: default;
-	  width: .9em; height: .9em; line-height: .9em; border-radius: 8px;
-	  background: lightgrey;
+	  width: .9em; height: .9em; line-height: .9em; border-radius: 50%;
+	  background: black;
 	}
 	
 </style>
@@ -29,12 +29,18 @@ onload = ()=> {
 		var p = document.createElement('div');
 		p.style.display = 'none';
 		i.appendChild(p);
-		var w = 200;
+		var w = 220;
 		p.style.marginLeft = (p.parentElement.offsetWidth-w)/2 +'px'; 
-		new iro.ColorPicker(p,{ width: w, handleRadius: 5, color: p.parentElement.style.color })
+		new iro.ColorPicker(p,{ width: w, color: p.parentElement.style.color, handleRadius: 5 })
 			.on(['color:init', 'color:change'], function(color){
-				if(this.el)
+				console.log(color.hsl.l);
+				if(this.el){
 					this.el.parentElement.style.color = color.hexString;
+					if(color.hsl.l > 40)
+						this.el.parentElement.style.background = 'black';
+					else
+						this.el.parentElement.style.background = 'white';
+				}
 				draw();
 		});
 	}
@@ -45,15 +51,16 @@ onload = ()=> {
 var drag;
 startDrag = (event)=>{
 	event.preventDefault();
-	drag = event.target;
-	drag.dx = event.clientX - drag.offsetLeft;
-	
-	for(i of document.querySelectorAll('.slider'))
-		if(i!=drag)
-			i.firstElementChild.style.display = 'none';
-		else
-			//FIXIT: Should not vanish when click on color wheel.
-			drag.firstElementChild.style.display = 'block';
+	if(event.target.classList.contains('slider')){
+		drag = event.target;
+		drag.dx = event.clientX - drag.offsetLeft;
+
+		for(i of document.querySelectorAll('.slider'))
+			if(i!=drag)
+				i.firstElementChild.style.display = 'none';
+			else
+				drag.firstElementChild.style.display = 'block';
+	}
 }
 window.addEventListener('mouseup', (event)=>{
 	drag = null;
@@ -63,13 +70,12 @@ document.body.addEventListener('mousemove', (event)=>{
 		strip = drag.parentElement;
 		
 		var x = event.clientX - drag.dx;
-		if(x<strip.offsetLeft)
-			x = strip.offsetLeft;
-		if(x>strip.offsetLeft+strip.offsetWidth-drag.offsetWidth)
-			x = strip.offsetLeft+strip.offsetWidth-drag.offsetWidth;
+		if(x<0)
+			x = 0;
+		if(x>strip.offsetWidth-drag.offsetWidth)
+			x = strip.offsetWidth-drag.offsetWidth;
 		drag.style.left = x+'px';
 		
-		//TODO: drag.firstElementChild max not exist
 		var x = event.clientX - drag.dx + drag.offsetWidth/2 - drag.firstElementChild.offsetWidth/2;
 		var y = drag.offsetTop + drag.offsetHeight + 12;
 		drag.firstElementChild.style.left = x+'px';
