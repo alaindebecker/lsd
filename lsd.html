@@ -1,0 +1,118 @@
+<meta charset="utf-8">
+
+<style>
+	* { font-family: sans-serif; background: black; color: white; }
+	html, body { padding:0; margin:0; }
+	body { height:100%; width:100%; display: flex; flex-direction: column; }
+	#board { position: relative; flex-grow:1; } 
+	.strip { position: absolute; left:0; right: 0; top: 100; height: 10px; background: white; opacity: .75; }
+	.strip:hover { opacity:1; }
+	.token { position: absolute; width: 16px; top: -4px; height: 18px; border-radius: 8px; background: lightgrey }
+	.token:hover { background: grey; }
+	input[type="color"] { position: absolute; display: none; }
+</style>
+
+<body>
+	<h1>LED Strip Designer</h1>
+	<div id="board"></div>
+	<input type="color" value="white">
+</body>
+
+
+<script>
+$ = function(selector){
+	var x = document.querySelectorAll(selector)
+	if(x.length==1)
+		return x[0]
+	return x
+}
+onload = function(){
+	for(var i=0; i<6; i++)
+		var strip  = createStrip(i*$('#board').offsetHeight / 6)
+}
+
+
+
+
+createStrip = function(top){
+	if(!top) top = 0;
+	var x = document.createElement('div')
+	x.classList = 'strip'
+	x.style.top = top+'px'
+	$('#board').appendChild(x)
+	
+	for(var j=0; j<6; j++)
+		createToken(x, j*$('#board').offsetWidth / 6)
+	return x
+}
+createToken = function(parent, left){
+	if(!left) left = 0;
+	var x = document.createElement('div')
+	x.classList = 'token'
+	x.style.left = left+'px'
+	parent.appendChild(x)
+	return x
+}
+
+deleteStrip = function(strip){
+	$('#board').removeChild(strip)	
+}
+deleteToken = function(token){
+	token.parentElement.removeChild(token)	
+	console.log('delete '+token)
+}
+
+
+
+
+var selectedStrip
+var selectedToken
+onmousedown = function(event){
+	if(event.target.classList.contains('strip')){
+		selectedStrip = event.target
+		selectedStrip.dy = event.clientY - $('#board').offsetTop - selectedStrip.offsetTop
+		if(selectedStrip.offsetTop==0)
+			createStrip()
+	}
+	if(event.target.classList.contains('token')){
+		selectedToken = event.target
+		selectedToken.dx = event.clientX - $('#board').offsetLeft - selectedToken.offsetLeft
+		if(selectedToken.offsetLeft==0)
+			createToken(selectedToken.parentElement)
+	}
+}
+onmousemove = function(){
+	if(selectedStrip){
+		var y = event.clientY - $('#board').offsetTop - selectedStrip.dy
+		if(y<0) y = 0
+		selectedStrip.style.top = y+'px'
+	}
+	if(selectedToken){
+		var x = event.clientX  - $('#board').offsetLeft - selectedToken.dx
+		if(x<0) x = 0
+		selectedToken.style.left = x+'px'
+	}
+}
+onmouseup = function(){
+	var x = event.clientX - $('#board').offsetLeft
+	if($('#board').offsetWidth<x) 
+		deleteToken(selectedToken.parentElement, selectedToken)
+	selectedToken = null
+
+	var y = event.clientY - $('#board').offsetTop
+	if($('#board').offsetHeight<y) 
+		deleteStrip(selectedStrip)
+	selectedStrip = null
+}
+ondblclick = function(event){
+	console.log(event.target)
+	if(event.target.classList.contains('token')){
+	    var box = event.target.getBoundingClientRect()
+		$('input[type="color"]').style.display = 'block'
+		$('input[type="color"]').style.left = (box.left-$('input[type="color"]').offsetWidth/2)+'px'
+		$('input[type="color"]').style.top = (box.top+box.height)+'px'
+		$('input[type="color"]').focus()
+		$('input[type="color"]').click()
+	}
+}
+</script>
